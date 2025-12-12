@@ -2,53 +2,76 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Bot Trading AI V2 - Linux GPU</title>
+    <title>AI Trading Terminal - Linux GPU</title>
     <style>
-        body { background-color: #0b0e11; color: #eaecef; font-family: 'Segoe UI', Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background-color: #1e2329; padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 380px; text-align: center; border: 1px solid #2b3139; }
-        h1 { color: #f0b90b; margin-bottom: 5px; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; }
-        .subtitle { color: #848e9c; font-size: 14px; margin-bottom: 25px; }
+        body { background-color: #000000; color: #eaecef; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; height: 100vh; box-sizing: border-box; display: flex; gap: 20px; }
         
-        .price-box { margin-bottom: 20px; }
-        .price-label { font-size: 12px; color: #848e9c; text-transform: uppercase; }
-        .price-val { font-size: 28px; font-weight: bold; letter-spacing: 1px; }
-        
-        .prediction-box { background-color: #2b3139; padding: 20px; border-radius: 12px; margin-top: 20px; border: 1px solid #474d57; }
-        
-        .bullish { color: #0ecb81; } /* Verde */
-        .bearish { color: #f6465d; } /* Rojo */
-        
-        .indicators { display: flex; justify-content: space-between; margin-top: 15px; font-size: 13px; }
-        .ind-item { background: #161a1e; padding: 8px; border-radius: 6px; width: 45%; }
-        .ind-val { font-weight: bold; display: block; margin-top: 4px; color: #eaecef; }
+        /* COLUMNA IZQUIERDA: TU IA */
+        .sidebar { width: 350px; display: flex; flex-direction: column; gap: 20px; }
+        .card { background-color: #161a25; padding: 25px; border-radius: 8px; border: 1px solid #2b3139; }
+        h1 { color: #f0b90b; margin: 0 0 10px 0; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .subtitle { color: #848e9c; font-size: 12px; margin-bottom: 20px; }
 
-        button { background-color: #f0b90b; border: none; padding: 15px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 25px; width: 100%; font-size: 16px; transition: 0.2s; }
-        button:hover { background-color: #d1a106; transform: translateY(-2px); }
-        .loading { opacity: 0.6; animation: blink 1s infinite; }
-        
-        @keyframes blink { 50% { opacity: 0.3; } }
+        .price-val { font-size: 32px; font-weight: bold; }
+        .bullish { color: #0ecb81; } 
+        .bearish { color: #f6465d; } 
+
+        .indicators-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .ind-box { background: #0b0e11; padding: 10px; border-radius: 4px; text-align: center; }
+        .ind-label { font-size: 11px; color: #848e9c; }
+        .ind-value { font-weight: bold; font-size: 14px; margin-top: 5px; display: block;}
+
+        button { background-color: #f0b90b; border: none; padding: 15px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; color: #000; margin-top: auto; }
+        button:hover { background-color: #d1a106; }
+
+        /* COLUMNA DERECHA: GRÁFICO */
+        .main-chart { flex-grow: 1; background-color: #161a25; border-radius: 8px; border: 1px solid #2b3139; overflow: hidden; position: relative; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h1>🤖 AI Trader V2</h1>
-        <p class="subtitle">Neural Network • Multi-Indicator • GPU</p>
-        
-        <div id="result">
-            <p class="loading">Iniciando sistemas...</p>
-        </div>
+    <div class="sidebar">
+        <div class="card" style="height: 100%; display: flex; flex-direction: column;">
+            <h1>🤖 NEURAL BOT V2</h1>
+            <p class="subtitle">Motor: LSTM • GPU: RTX 2060 • OS: Linux</p>
+            
+            <div id="ai-result">
+                <p style="color:#848e9c">Esperando análisis...</p>
+            </div>
 
-        <button onclick="consultarIA()">📡 Analizar Mercado</button>
+            <button onclick="consultarIA()">📡 EJECUTAR ANÁLISIS IA</button>
+        </div>
     </div>
+
+    <div class="main-chart">
+        <div class="tradingview-widget-container" style="height:100%;width:100%">
+            <div id="tradingview_b24a3" style="height:calc(100% - 32px);width:100%"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+            <script type="text/javascript">
+            new TradingView.widget({
+                "autosize": true,
+                "symbol": "BINANCE:BTCUSDT",
+                "interval": "15", /* VELAS DE 15 MINUTOS */
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "es",
+                "toolbar_bg": "#f1f3f6",
+                "enable_publishing": false,
+                "allow_symbol_change": true,
+                "container_id": "tradingview_b24a3"
+            });
+            </script>
+        </div>
+        </div>
 
     <script>
         async function consultarIA() {
-            const display = document.getElementById('result');
+            const display = document.getElementById('ai-result');
             const btn = document.querySelector('button');
             
             display.style.opacity = '0.5';
-            btn.innerText = "Pensando...";
+            btn.innerText = "PROCESANDO TENSORFLOW...";
             btn.disabled = true;
             
             try {
@@ -60,49 +83,47 @@
                 } else {
                     const colorClass = data.tendencia.includes("ALCISTA") ? "bullish" : "bearish";
                     
-                    // Lógica visual para RSI
                     let rsiColor = "#eaecef";
-                    if(data.indicadores.rsi > 70) rsiColor = "#f6465d"; // Sobrecompra (Peligro)
-                    if(data.indicadores.rsi < 30) rsiColor = "#0ecb81"; // Sobreventa (Oportunidad)
+                    if(data.indicadores.rsi > 70) rsiColor = "#f6465d"; 
+                    if(data.indicadores.rsi < 30) rsiColor = "#0ecb81";
 
                     display.innerHTML = `
-                        <div class="price-box">
-                            <div class="price-label">Precio Actual (BTC)</div>
+                        <div style="margin-bottom: 20px;">
+                            <span style="font-size:12px; color:#848e9c">PRECIO ACTUAL</span>
                             <div class="price-val">$${data.precio_actual.toLocaleString()}</div>
                         </div>
 
-                        <div class="prediction-box">
-                            <div class="price-label">Predicción 24H</div>
-                            <div class="price-val ${colorClass}">$${data.prediccion_mañana.toLocaleString()}</div>
-                            <div style="margin-top:5px; font-weight:bold" class="${colorClass}">
+                        <div style="background:#0b0e11; padding:15px; border-radius:6px; border-left: 4px solid ${data.tendencia.includes("ALCISTA") ? '#0ecb81' : '#f6465d'}">
+                            <span style="font-size:12px; color:#848e9c">PREDICCIÓN (Corto Plazo)</span>
+                            <div class="price-val ${colorClass}" style="font-size:24px">$${data.prediccion_mañana.toLocaleString()}</div>
+                            <div style="font-weight:bold; margin-top:5px" class="${colorClass}">
                                 ${data.tendencia} (${data.porcentaje}%)
                             </div>
+                        </div>
 
-                            <div class="indicators">
-                                <div class="ind-item">
-                                    <span style="color:#848e9c">RSI (14)</span>
-                                    <span class="ind-val" style="color:${rsiColor}">${data.indicadores.rsi}</span>
-                                </div>
-                                <div class="ind-item">
-                                    <span style="color:#848e9c">Volatilidad</span>
-                                    <span class="ind-val">${data.indicadores.volatilidad}</span>
-                                </div>
+                        <div class="indicators-grid">
+                            <div class="ind-box">
+                                <span class="ind-label">RSI (14)</span>
+                                <span class="ind-value" style="color:${rsiColor}">${data.indicadores.rsi}</span>
+                            </div>
+                            <div class="ind-box">
+                                <span class="ind-label">BANDAS</span>
+                                <span class="ind-value">${data.indicadores.volatilidad}</span>
                             </div>
                         </div>
                     `;
                 }
             } catch (error) {
                 console.error(error);
-                display.innerHTML = '<p style="color:#f6465d">Error de conexión con el servidor.</p>';
+                display.innerHTML = '<p style="color:#f6465d">Error de conexión.</p>';
             } finally {
                 display.style.opacity = '1';
-                btn.innerText = "📡 Analizar Mercado";
+                btn.innerText = "📡 EJECUTAR ANÁLISIS IA";
                 btn.disabled = false;
             }
         }
-
+        // Ejecutar al inicio
         consultarIA();
     </script>
-
 </body>
 </html>
