@@ -2,71 +2,103 @@ import os
 import numpy as np
 import pandas as pd
 import yfinance as yf
-from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import load_model
 from django.conf import settings
+from tensorflow.keras.models import load_model
+from sklearn.preprocessing import MinMaxScaler
+from ta.momentum import RSIIndicator
+from ta.volatility import BollingerBands
 
-# Configuración
+# CONFIGURACIÓN
 SYMBOL = 'BTC-USD'
-MODEL_PATH = os.path.join(settings.BASE_DIR, 'research', 'modelo_btc_v1.h5')
+# IMPORTANTE: Apuntamos al nuevo modelo V2
+MODEL_PATH = os.path.join(settings.BASE_DIR, 'research', 'modelo_btc_v2.h5')
 
 def predecir_precio_futuro():
     """
-    1. Descarga datos recientes.
-    2. Carga el modelo entrenado.
-    3. Devuelve la predicción y el precio actual.
+    1. Descarga datos.
+    2. Calcula indicadores (RSI, BB).
+    3. Prepara los datos para el modelo V2.
+    4. Predice.
     """
     try:
-        # 1. Verificar si existe el modelo
         if not os.path.exists(MODEL_PATH):
-            return {"error": "El cerebro (.h5) no se encuentra en la carpeta research."}
+            return {"error": f"No encuentro el modelo en: {MODEL_PATH}"}
 
-        # 2. Obtener datos en vivo (Necesitamos 60 días + un margen de seguridad)
-        # Bajamos 90 días para asegurar que tengamos 60 velas válidas
-        df = yf.download(SYMBOL, period='3mo', interval='1d')
+        # 1. OBTENER DATOS (Bajamos 6 meses para tener espacio para calcular indicadores)
+        # Necesitamos historial suficiente para que el RSI sea preciso
+        df = yf.download(SYMBOL, period='6mo', interval='1d')
         
-        if len(df) < 60:
-            return {"error": "No hay suficientes datos de mercado para predecir."}
+        # Corrección para yfinance nuevo (aplanar índices si vienen complejos)
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
 
-        # Tomamos solo el precio de cierre
-        data = df['Close'].values
+        if len(df) < 80:
+            return {"error": "No hay suficientes datos de mercado."}
+
+        # 2. CALCULAR INDICADORES (Igual que en el entrenamiento)
+        # RSI
+        rsi = RSIIndicator(close=df["Close"], window=14)
+        df["RSI"] = rsi.rsi()
+
+        # Bandas Bollinger
+        bb = BollingerBands(close=df["Close"], window=20, window_dev=2)
+        df["BB_High"] = bb.bollinger_hband()
+        df["BB_Low"] = bb.bollinger_lband()
+
+        # Limpiamos nulos (los primeros días no tienen cálculo)
+        df.dropna(inplace=True)
+
+        # Seleccionamos las mismas columnas que usamos al entrenar
+        feature_cols = ['Close', 'RSI', 'BB_High', 'BB_Low']
+        data = df[feature_cols].values
+
+        # 3. PREPARAR ESCALADO
+        # Tomamos los últimos 60 días
+        last_60_days = data[-60:]
         
-        # 3. Preprocesamiento (Igual que en el entrenamiento)
-        # Usamos los ultimos 60 días exactos
-        last_60_days = data[-60:].reshape(-1, 1)
-        
-        # Escalamos entre 0 y 1
+        # Escalamos (El modelo necesita ver todo entre 0 y 1)
         scaler = MinMaxScaler(feature_range=(0, 1))
-        scaler.fit(data.reshape(-1, 1)) # Ajustamos el scaler con todos los datos recientes
+        # Ajustamos el scaler con todos los datos recientes para tener referencia
+        scaler.fit(data) 
         
         last_60_days_scaled = scaler.transform(last_60_days)
 
-        # Formato para TensorFlow: (1 muestra, 60 pasos, 1 feature)
-        X_test = []
-        X_test.append(last_60_days_scaled)
-        X_test = np.array(X_test)
-        X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
-
-        # 4. Cargar el Cerebro y Predecir
+        # Formato para TensorFlow: (1 muestra, 60 pasos, 4 features)
+        X_test = np.array([last_60_days_scaled])
+        
+        # 4. PREDICCIÓN
         model = load_model(MODEL_PATH)
         pred_scaled = model.predict(X_test)
 
-        # 5. Invertir la escala (De 0.5 a $45,000)
-        pred_price = scaler.inverse_transform(pred_scaled)
-        pred_price_final = float(pred_price[0][0])
-        current_price = float(data[-1])
-
-        # Calcular tendencia
-        tendencia = "ALCISTA 🚀" if pred_price_final > current_price else "BAJISTA 🔻"
-        cambio_pct = ((pred_price_final - current_price) / current_price) * 100
+        # 5. INVERTIR ESCALA
+        # El modelo devuelve 1 solo valor (el precio escalado).
+        # Pero el scaler espera 4 columnas. Hacemos un truco para des-escalar:
+        # Creamos una fila falsa con la predicción en la columna 0 y ceros en el resto
+        dummy_row = np.zeros((1, len(feature_cols)))
+        dummy_row[0, 0] = pred_scaled[0][0]
+        
+        pred_price = scaler.inverse_transform(dummy_row)[0, 0]
+        
+        # Datos actuales para comparar
+        current_price = float(df['Close'].iloc[-1])
+        
+        # Tendencia
+        tendencia = "ALCISTA 🚀" if pred_price > current_price else "BAJISTA 🔻"
+        cambio_pct = ((pred_price - current_price) / current_price) * 100
 
         return {
             "moneda": SYMBOL,
             "precio_actual": round(current_price, 2),
-            "prediccion_mañana": round(pred_price_final, 2),
+            "prediccion_mañana": round(pred_price, 2),
             "tendencia": tendencia,
-            "porcentaje": round(cambio_pct, 2)
+            "porcentaje": round(cambio_pct, 2),
+            "indicadores": {
+                "rsi": round(df['RSI'].iloc[-1], 2),
+                "volatilidad": "Alta" if (df['BB_High'].iloc[-1] - df['BB_Low'].iloc[-1]) > 2000 else "Normal"
+            }
         }
 
     except Exception as e:
+        import traceback
+        traceback.print_exc() # Esto imprimirá el error real en la terminal negra
         return {"error": str(e)}

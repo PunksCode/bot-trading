@@ -2,65 +2,105 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Bot Trading AI - RTX 2060</title>
+    <title>Bot Trading AI V2 - Linux GPU</title>
     <style>
-        body { background-color: #0b0e11; color: #eaecef; font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background-color: #1e2329; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: 350px; text-align: center; }
-        h1 { color: #f0b90b; margin-bottom: 20px; } /* Amarillo Binance */
-        .price { font-size: 24px; font-weight: bold; margin: 10px 0; }
-        .prediction-box { background-color: #2b3139; padding: 15px; border-radius: 8px; margin-top: 20px; }
-        .bullish { color: #0ecb81; font-weight: bold; } /* Verde Subida */
-        .bearish { color: #f6465d; font-weight: bold; } /* Rojo Bajada */
-        .loading { color: #848e9c; font-style: italic; }
-        button { background-color: #f0b90b; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 20px; width: 100%; }
-        button:hover { background-color: #d1a106; }
+        body { background-color: #0b0e11; color: #eaecef; font-family: 'Segoe UI', Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background-color: #1e2329; padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 380px; text-align: center; border: 1px solid #2b3139; }
+        h1 { color: #f0b90b; margin-bottom: 5px; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; }
+        .subtitle { color: #848e9c; font-size: 14px; margin-bottom: 25px; }
+        
+        .price-box { margin-bottom: 20px; }
+        .price-label { font-size: 12px; color: #848e9c; text-transform: uppercase; }
+        .price-val { font-size: 28px; font-weight: bold; letter-spacing: 1px; }
+        
+        .prediction-box { background-color: #2b3139; padding: 20px; border-radius: 12px; margin-top: 20px; border: 1px solid #474d57; }
+        
+        .bullish { color: #0ecb81; } /* Verde */
+        .bearish { color: #f6465d; } /* Rojo */
+        
+        .indicators { display: flex; justify-content: space-between; margin-top: 15px; font-size: 13px; }
+        .ind-item { background: #161a1e; padding: 8px; border-radius: 6px; width: 45%; }
+        .ind-val { font-weight: bold; display: block; margin-top: 4px; color: #eaecef; }
+
+        button { background-color: #f0b90b; border: none; padding: 15px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 25px; width: 100%; font-size: 16px; transition: 0.2s; }
+        button:hover { background-color: #d1a106; transform: translateY(-2px); }
+        .loading { opacity: 0.6; animation: blink 1s infinite; }
+        
+        @keyframes blink { 50% { opacity: 0.3; } }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h1>🤖 AI TRADER BOT</h1>
-        <p>BTC/USD (Tiempo Real)</p>
+        <h1>🤖 AI Trader V2</h1>
+        <p class="subtitle">Neural Network • Multi-Indicator • GPU</p>
+        
         <div id="result">
-            <p class="loading">Consultando red neuronal...</p>
+            <p class="loading">Iniciando sistemas...</p>
         </div>
-        <button onclick="consultarIA()">Actualizar Predicción</button>
+
+        <button onclick="consultarIA()">📡 Analizar Mercado</button>
     </div>
 
     <script>
         async function consultarIA() {
             const display = document.getElementById('result');
-            display.innerHTML = '<p class="loading">Pensando (GPU)...</p>';
+            const btn = document.querySelector('button');
+            
+            display.style.opacity = '0.5';
+            btn.innerText = "Pensando...";
+            btn.disabled = true;
             
             try {
-                // Llamamos a TU API de Django
                 const response = await fetch('/api/predict/');
                 const data = await response.json();
 
                 if (data.error) {
-                    display.innerHTML = `<p style="color:red">Error: ${data.error}</p>`;
-                    return;
+                    display.innerHTML = `<p style="color:#f6465d">Error: ${data.error}</p>`;
+                } else {
+                    const colorClass = data.tendencia.includes("ALCISTA") ? "bullish" : "bearish";
+                    
+                    // Lógica visual para RSI
+                    let rsiColor = "#eaecef";
+                    if(data.indicadores.rsi > 70) rsiColor = "#f6465d"; // Sobrecompra (Peligro)
+                    if(data.indicadores.rsi < 30) rsiColor = "#0ecb81"; // Sobreventa (Oportunidad)
+
+                    display.innerHTML = `
+                        <div class="price-box">
+                            <div class="price-label">Precio Actual (BTC)</div>
+                            <div class="price-val">$${data.precio_actual.toLocaleString()}</div>
+                        </div>
+
+                        <div class="prediction-box">
+                            <div class="price-label">Predicción 24H</div>
+                            <div class="price-val ${colorClass}">$${data.prediccion_mañana.toLocaleString()}</div>
+                            <div style="margin-top:5px; font-weight:bold" class="${colorClass}">
+                                ${data.tendencia} (${data.porcentaje}%)
+                            </div>
+
+                            <div class="indicators">
+                                <div class="ind-item">
+                                    <span style="color:#848e9c">RSI (14)</span>
+                                    <span class="ind-val" style="color:${rsiColor}">${data.indicadores.rsi}</span>
+                                </div>
+                                <div class="ind-item">
+                                    <span style="color:#848e9c">Volatilidad</span>
+                                    <span class="ind-val">${data.indicadores.volatilidad}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
                 }
-
-                // Determinamos el color (Verde si sube, Rojo si baja)
-                const colorClass = data.tendencia.includes("ALCISTA") ? "bullish" : "bearish";
-                const arrow = data.tendencia.includes("ALCISTA") ? "🚀" : "🔻";
-
-                // Dibujamos el resultado
-                display.innerHTML = `
-                    <div class="price">Actual: $${data.precio_actual}</div>
-                    <div class="prediction-box">
-                        <p>Predicción 24h:</p>
-                        <div class="price ${colorClass}">$${data.prediccion_mañana}</div>
-                        <p class="${colorClass}">${data.tendencia} (${data.porcentaje}%)</p>
-                    </div>
-                `;
             } catch (error) {
-                display.innerHTML = '<p style="color:red">Error de conexión con el servidor.</p>';
+                console.error(error);
+                display.innerHTML = '<p style="color:#f6465d">Error de conexión con el servidor.</p>';
+            } finally {
+                display.style.opacity = '1';
+                btn.innerText = "📡 Analizar Mercado";
+                btn.disabled = false;
             }
         }
 
-        // Ejecutar al cargar la página
         consultarIA();
     </script>
 
