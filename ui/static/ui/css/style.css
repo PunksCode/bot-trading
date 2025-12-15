@@ -1,0 +1,118 @@
+/* RESET & FUENTES */
+body { 
+    margin: 0; 
+    padding: 0; 
+    font-family: 'Courier New', monospace; 
+    color: #00ff41; /* Verde Matrix Clásico */
+    background-color: #000;
+    overflow-x: hidden;
+}
+
+/* CANVAS MATRIX DE FONDO */
+#matrix-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1; /* Detrás de todo */
+}
+
+/* CONTENEDOR PRINCIPAL */
+.container { 
+    max-width: 95%; /* Ocupar casi toda la pantalla */
+    margin: 0 auto; 
+    padding: 20px; 
+    position: relative;
+    z-index: 1;
+}
+
+/* HEADER */
+.header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    border-bottom: 1px solid #003b00; 
+    padding-bottom: 15px; 
+    margin-bottom: 25px; 
+    background: rgba(0, 0, 0, 0.7); /* Fondo semi-transparente para leer */
+    padding: 20px;
+    border-radius: 8px;
+    backdrop-filter: blur(5px);
+}
+
+.brand { font-size: 24px; font-weight: bold; text-shadow: 0 0 10px #00ff41; letter-spacing: 2px; }
+.price-val { font-size: 28px; font-weight: bold; color: #fff; }
+.price-lbl { font-size: 12px; color: #008f11; text-align: right; }
+
+/* LAYOUT GRID (Charts arriba, Datos abajo) */
+.main-layout { display: flex; flex-direction: column; gap: 20px; }
+
+/* SECCIÓN CHART (GIGANTE) */
+.chart-container { 
+    height: 60vh; /* 60% del alto de la pantalla */
+    width: 100%;
+    background: rgba(0, 0, 0, 0.8); 
+    border: 1px solid #003b00; 
+    border-radius: 4px; 
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
+}
+
+/* PANEL DE DATOS (TARJETAS) */
+.data-panel { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    gap: 20px; 
+}
+
+/* TARJETAS GLASSMORPHISM */
+.card { 
+    background: rgba(10, 15, 10, 0.85); 
+    padding: 25px; 
+    border-radius: 4px; 
+    border: 1px solid #003b00; 
+    transition: 0.3s;
+}
+.card:hover { border-color: #00ff41; box-shadow: 0 0 15px rgba(0, 255, 65, 0.2); }
+
+.label { font-size: 11px; color: #008f11; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.value { font-size: 22px; font-weight: bold; color: #fff; }
+
+/* ESTADOS DE RÉGIMEN */
+.reg-ranging { color: #0ecb81; text-shadow: 0 0 8px #0ecb81; }  
+.reg-uncertain { color: #f0b90b; text-shadow: 0 0 8px #f0b90b; } 
+.reg-trending { color: #f6465d; text-shadow: 0 0 8px #f6465d; } 
+
+/* CONSOLA */
+.console-box { 
+    margin-top: 20px; 
+    background: rgba(0, 0, 0, 0.9); 
+    padding: 15px; 
+    border: 1px solid #003b00; 
+    height: 150px; 
+    overflow-y: auto; 
+    font-size: 13px; 
+    line-height: 1.6; 
+    color: #00ff41; 
+    font-family: 'Consolas', monospace; 
+}
+
+/* BOTÓN CYBERPUNK */
+.refresh-btn { 
+    width: 100%; padding: 15px; 
+    background: transparent; 
+    color: #00ff41; 
+    border: 1px solid #00ff41; 
+    font-weight: bold; 
+    font-size: 16px; 
+    cursor: pointer; 
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: 0.3s;
+    margin-top: 10px;
+}
+.refresh-btn:hover { 
+    background: #00ff41; 
+    color: #000; 
+    box-shadow: 0 0 20px #00ff41;
+}

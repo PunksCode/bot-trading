@@ -4,3 +4,10 @@ __pycache__/
 *.pyc
 db.sqlite3
 *.h5
+
+# Archivos Privados (Lógica Propietaria)
+ui/decision_engine_private.py
+research/
+.env
+secrets.json
+

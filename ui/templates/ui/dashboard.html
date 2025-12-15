@@ -1,129 +1,120 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>AI Trading Terminal - Linux GPU</title>
-    <style>
-        body { background-color: #000000; color: #eaecef; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; height: 100vh; box-sizing: border-box; display: flex; gap: 20px; }
-        
-        /* COLUMNA IZQUIERDA: TU IA */
-        .sidebar { width: 350px; display: flex; flex-direction: column; gap: 20px; }
-        .card { background-color: #161a25; padding: 25px; border-radius: 8px; border: 1px solid #2b3139; }
-        h1 { color: #f0b90b; margin: 0 0 10px 0; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; }
-        .subtitle { color: #848e9c; font-size: 12px; margin-bottom: 20px; }
-
-        .price-val { font-size: 32px; font-weight: bold; }
-        .bullish { color: #0ecb81; } 
-        .bearish { color: #f6465d; } 
-
-        .indicators-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .ind-box { background: #0b0e11; padding: 10px; border-radius: 4px; text-align: center; }
-        .ind-label { font-size: 11px; color: #848e9c; }
-        .ind-value { font-weight: bold; font-size: 14px; margin-top: 5px; display: block;}
-
-        button { background-color: #f0b90b; border: none; padding: 15px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; color: #000; margin-top: auto; }
-        button:hover { background-color: #d1a106; }
-
-        /* COLUMNA DERECHA: GRÁFICO */
-        .main-chart { flex-grow: 1; background-color: #161a25; border-radius: 8px; border: 1px solid #2b3139; overflow: hidden; position: relative; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSTEM V11 // MATRIX</title>
+    <link rel="stylesheet" href="{% static 'ui/css/style.css' %}">
 </head>
 <body>
+    <canvas id="matrix-canvas"></canvas>
 
-    <div class="sidebar">
-        <div class="card" style="height: 100%; display: flex; flex-direction: column;">
-            <h1>🤖 NEURAL BOT V2</h1>
-            <p class="subtitle">Motor: LSTM • GPU: RTX 2060 • OS: Linux</p>
-            
-            <div id="ai-result">
-                <p style="color:#848e9c">Esperando análisis...</p>
+    <div class="container">
+        <div class="header">
+            <div class="brand">
+                <span>⚡ QUANT SYSTEM V11</span>
             </div>
+            <div>
+                <div class="price-lbl">BTC/USDT LIVE</div>
+                <div class="price-val">${{ precio }}</div>
+            </div>
+        </div>
 
-            <button onclick="consultarIA()">📡 EJECUTAR ANÁLISIS IA</button>
+        <div class="main-layout">
+            <div class="chart-container">
+                <div class="tradingview-widget-container" style="height:100%;width:100%">
+                    <div id="tradingview_chart" style="height:100%;width:100%"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+                    <script type="text/javascript">
+                    new TradingView.widget(
+                    {
+                        "autosize": true,
+                        "symbol": "BINANCE:BTCUSDT",
+                        "interval": "240", /* 4 Horas */
+                        "timezone": "America/Argentina/Buenos_Aires",
+                        "theme": "dark",
+                        "style": "1",
+                        "locale": "es",
+                        "toolbar_bg": "#f1f3f6",
+                        "enable_publishing": false,
+                        "hide_side_toolbar": false,
+                        "allow_symbol_change": true,
+                        "container_id": "tradingview_chart"
+                    }
+                    );
+                    </script>
+                </div>
+                </div>
+
+            <div class="data-panel">
+                
+                <div class="card">
+                    <div class="label">Diagnóstico IA</div>
+                    <div class="value">
+                        {% if regime == 'RANGING' %}
+                            <span class="reg-ranging">↔ LATERAL (Grid)</span>
+                        {% elif regime == 'UNCERTAIN' %}
+                            <span class="reg-uncertain">? INCIERTO (Shannon)</span>
+                        {% elif regime == 'TRENDING' %}
+                            <span class="reg-trending">⚡ PELIGRO (Cash)</span>
+                        {% else %}
+                            <span>{{ regime }}</span>
+                        {% endif %}
+                    </div>
+                    <div style="font-size: 13px; color: #008f11; margin-top: 10px;">
+                        Estrategia: <span style="color:#fff; border-bottom:1px dashed #00ff41">{{ strategy }}</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="label">Total Equity</div>
+                    <div class="value">${{ equity }}</div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px; border-top: 1px dashed #003b00; padding-top: 10px;">
+                        <span style="font-size: 14px; color:#aaa;">USDT: ${{ usdt }}</span>
+                        <span style="font-size: 14px; color:#aaa;">BTC: {{ btc }}</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="label">Métricas de Riesgo</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div class="label" style="font-size:9px">Drawdown Actual</div>
+                            <div class="value" style="color: {% if dd < -5 %}#f6465d{% else %}#fff{% endif %}">
+                                {{ dd }}%
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="label" style="font-size:9px">Max DD Histórico</div>
+                            <div class="value" style="color: #f6465d">{{ max_dd }}%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="label">Control Manual</div>
+                    <form method="get">
+                        <button type="submit" class="refresh-btn">
+                            EJECUTAR ANÁLISIS
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="console-box">
+            > SYSTEM_INIT... SUCCESS<br>
+            > CONNECTING_BINANCE_API... ESTABLISHED<br>
+            > LOADING_TIMEFRAME_4H... COMPLETE<br>
+            > DETECTED_REGIME: [ {{ regime }} ]<br>
+            > ---------------------------------------------------<br>
+            > {{ message }}<br>
+            > ---------------------------------------------------<br>
+            > WAITING_FOR_NEXT_TICK...
         </div>
     </div>
 
-    <div class="main-chart">
-        <div class="tradingview-widget-container" style="height:100%;width:100%">
-            <div id="tradingview_b24a3" style="height:calc(100% - 32px);width:100%"></div>
-            <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-            <script type="text/javascript">
-            new TradingView.widget({
-                "autosize": true,
-                "symbol": "BINANCE:BTCUSDT",
-                "interval": "15", /* VELAS DE 15 MINUTOS */
-                "timezone": "Etc/UTC",
-                "theme": "dark",
-                "style": "1",
-                "locale": "es",
-                "toolbar_bg": "#f1f3f6",
-                "enable_publishing": false,
-                "allow_symbol_change": true,
-                "container_id": "tradingview_b24a3"
-            });
-            </script>
-        </div>
-        </div>
-
-    <script>
-        async function consultarIA() {
-            const display = document.getElementById('ai-result');
-            const btn = document.querySelector('button');
-            
-            display.style.opacity = '0.5';
-            btn.innerText = "PROCESANDO TENSORFLOW...";
-            btn.disabled = true;
-            
-            try {
-                const response = await fetch('/api/predict/');
-                const data = await response.json();
-
-                if (data.error) {
-                    display.innerHTML = `<p style="color:#f6465d">Error: ${data.error}</p>`;
-                } else {
-                    const colorClass = data.tendencia.includes("ALCISTA") ? "bullish" : "bearish";
-                    
-                    let rsiColor = "#eaecef";
-                    if(data.indicadores.rsi > 70) rsiColor = "#f6465d"; 
-                    if(data.indicadores.rsi < 30) rsiColor = "#0ecb81";
-
-                    display.innerHTML = `
-                        <div style="margin-bottom: 20px;">
-                            <span style="font-size:12px; color:#848e9c">PRECIO ACTUAL</span>
-                            <div class="price-val">$${data.precio_actual.toLocaleString()}</div>
-                        </div>
-
-                        <div style="background:#0b0e11; padding:15px; border-radius:6px; border-left: 4px solid ${data.tendencia.includes("ALCISTA") ? '#0ecb81' : '#f6465d'}">
-                            <span style="font-size:12px; color:#848e9c">PREDICCIÓN (Corto Plazo)</span>
-                            <div class="price-val ${colorClass}" style="font-size:24px">$${data.prediccion_mañana.toLocaleString()}</div>
-                            <div style="font-weight:bold; margin-top:5px" class="${colorClass}">
-                                ${data.tendencia} (${data.porcentaje}%)
-                            </div>
-                        </div>
-
-                        <div class="indicators-grid">
-                            <div class="ind-box">
-                                <span class="ind-label">RSI (14)</span>
-                                <span class="ind-value" style="color:${rsiColor}">${data.indicadores.rsi}</span>
-                            </div>
-                            <div class="ind-box">
-                                <span class="ind-label">BANDAS</span>
-                                <span class="ind-value">${data.indicadores.volatilidad}</span>
-                            </div>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error(error);
-                display.innerHTML = '<p style="color:#f6465d">Error de conexión.</p>';
-            } finally {
-                display.style.opacity = '1';
-                btn.innerText = "📡 EJECUTAR ANÁLISIS IA";
-                btn.disabled = false;
-            }
-        }
-        // Ejecutar al inicio
-        consultarIA();
-    </script>
+    <script src="{% static 'ui/js/matrix.js' %}"></script>
 </body>
 </html>

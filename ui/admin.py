@@ -1,15 +1,23 @@
 from django.contrib import admin
-from .models import StrategyConfig, Trade
+from .models import Portfolio, SystemState, ActiveOrder, TradeHistory
 
-@admin.register(StrategyConfig)
-class StrategyConfigAdmin(admin.ModelAdmin):
-    list_display = ("name", "param_fast", "param_slow", "is_enabled")
-    list_editable = ("param_fast", "param_slow", "is_enabled")
+@admin.register(Portfolio)
+class PortfolioAdmin(admin.ModelAdmin):
+    list_display = ('usdt_balance', 'btc_balance', 'initial_capital', 'last_updated')
 
-@admin.register(Trade)
-class TradeAdmin(admin.ModelAdmin):
-    list_display = ("created_at", "side", "symbol", "price", "qty", "status")
-    list_filter = ("side", "status", "symbol")
-    search_fields = ("order_id",)
+@admin.register(SystemState)
+class SystemStateAdmin(admin.ModelAdmin):
+    # Este es el panel de control del Cerebro
+    list_display = ('current_regime', 'active_strategy', 'volatility_score', 'last_switch')
 
+@admin.register(ActiveOrder)
+class ActiveOrderAdmin(admin.ModelAdmin):
+    # Órdenes vivas del Grid
+    list_display = ('side', 'price', 'amount_usdt', 'created_at')
 
+@admin.register(TradeHistory)
+class TradeHistoryAdmin(admin.ModelAdmin):
+    # La bitácora unificada
+    list_display = ('timestamp', 'strategy_used', 'action', 'pnl_realized')
+    list_filter = ('strategy_used', 'action')
+    ordering = ('-timestamp',)
