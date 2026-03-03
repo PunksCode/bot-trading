@@ -1,0 +1,37 @@
+services:
+  # Bot de Trading (loop principal + dashboard web)
+  bot:
+    build: .
+    container_name: quant_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3
+      - ./bot_operaciones.log:/app/bot_operaciones.log
+      - ./research:/app/research
+    networks:
+      - bot_network
+
+  # Bot de Telegram (comandos interactivos + reportes horarios)
+  telegram:
+    build: .
+    container_name: quant_telegram
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3
+      - ./bot_operaciones.log:/app/bot_operaciones.log
+      - ./research:/app/research
+    command: python manage.py run_telegram
+    depends_on:
+      - bot
+    networks:
+      - bot_network
+
+networks:
+  bot_network:
+    driver: bridge

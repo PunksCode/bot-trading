@@ -12,6 +12,8 @@ from ta.volatility import BollingerBands
 from ta.volume import OnBalanceVolumeIndicator
 from ta.trend import ADXIndicator
 from ta.volatility import AverageTrueRange
+from ui.bot_runtime import BOT_STATE
+from django.utils import timezone
 
 # CONFIGURACIÓN V4
 SYMBOL_BINANCE = 'BTC/USDT'
@@ -110,7 +112,13 @@ def predecir_precio_futuro():
             vol_state = "ALTO 🔥" # Mucha actividad
         elif current_vol < (avg_vol * 0.5):
             vol_state = "BAJO 💤" # Poco interés
-
+        BOT_STATE.update({
+            "last_update": timezone.now().strftime("%H:%M:%S"),
+            "tendencia": tendencia,
+            "precio_actual": round(current_price, 2),
+            "prediccion": round(pred_price, 2),
+            "mensaje": f"{tendencia} | Δ {round(pct_change,2)}%",
+        })
         return {
             "moneda": "BTC/USDT (Binance 15m)",
             "precio_actual": round(current_price, 2),

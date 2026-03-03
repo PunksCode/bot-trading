@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True, encoding="utf-8")
 
 API_KEY = os.getenv("BINANCE_API_KEY")
-API_SECRET = os.getenv("BINANCE_API_SECRET")
+API_SECRET = os.getenv("BINANCE_SECRET_KEY")
 BASE_URL = os.getenv("BINANCE_BASE_URL", "https://testnet.binance.vision")
 
 def _client():

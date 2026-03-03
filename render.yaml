@@ -1,0 +1,31 @@
+services:
+  # ─── Bot de Trading (Background Worker — NO se duerme) ───
+  - type: worker
+    name: quant-bot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: bash start.sh
+    plan: free
+    envVars:
+      - key: BINANCE_API_KEY
+        sync: false
+      - key: BINANCE_SECRET_KEY
+        sync: false
+      - key: BINANCE_BASE_URL
+        sync: false
+      - key: BINANCE_WS_URL
+        sync: false
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: "*"
+      - key: SYMBOL
+        value: "BTCUSDT"
+      - key: PYTHONUNBUFFERED
+        value: "1"

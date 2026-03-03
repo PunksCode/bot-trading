@@ -5,9 +5,21 @@ __pycache__/
 db.sqlite3
 *.h5
 
-# Archivos Privados (Lógica Propietaria)
+# Archivos Privados (Lógica Propietaria / "El Cerebro")
 ui/decision_engine_private.py
+ui/ai_brain.py
+ui/trader.py
+core/core/
 research/
+
+# Entrenamiento y Notebooks
+entrenar_*.py
+*.ipynb
+
+# Secretos
 .env
 secrets.json
 
+# Logs y archivos generados
+bot_operaciones.log
+staticfiles/

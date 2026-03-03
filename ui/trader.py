@@ -1,24 +1,51 @@
 from .models import Portfolio, SystemState, ActiveOrder, TradeHistory
 import pandas as pd
+import logging
 
-try:
-    # Intenta importar tu cerebro real (que NO subirás)
-    from .decision_engine_private import DecisionEngine
-    print("🔓 CARGANDO MOTOR PROPIETARIO V11")
-except ImportError:
-    # Si no existe, carga la versión pública
-    from .decision_engine import DecisionEngine
-    print("🔒 CARGANDO MOTOR DEMO (PUBLICO)")
+from .decision_engine_private import DecisionEngine
+
+logger = logging.getLogger(__name__)
 
 # CONFIGURACIONES
 GRID_LINES = 10
-SHANNON_THRESHOLD = 0.02 # 2% desvío
+SHANNON_THRESHOLD = 0.02  # 2% desvío
+LSTM_CONFIANZA_ESCALA = 0.5  # 0.5% predicho = confianza 1.0
+
+def obtener_lstm_confianza():
+    """
+    Llama al LSTM V4 y devuelve un score de confianza [-1.0, +1.0].
+    +1.0 = muy alcista, -1.0 = muy bajista, 0.0 = neutral.
+    Si falla, retorna 0.0 (neutral, no afecta operaciones).
+    """
+    try:
+        from .ai_brain import predecir_precio_futuro
+        resultado = predecir_precio_futuro()
+        if 'error' in resultado:
+            logger.warning(f"LSTM error: {resultado['error']}")
+            return 0.0, 0.0
+        # Extraer el % de cambio predicho
+        precio_actual = resultado.get('precio_actual', 0)
+        prediccion = resultado.get('prediccion', 0)
+        if precio_actual > 0:
+            pct_change = ((prediccion - precio_actual) / precio_actual) * 100
+        else:
+            pct_change = 0.0
+        # Convertir a confianza [-1, 1]
+        confianza = max(-1.0, min(1.0, pct_change / LSTM_CONFIANZA_ESCALA))
+        return confianza, pct_change
+    except Exception as e:
+        logger.warning(f"LSTM no disponible: {e}")
+        return 0.0, 0.0
+
 
 def ejecutar_sistema(df_4h, precio_actual):
     wallet, _ = Portfolio.objects.get_or_create(id=1)
     state, _ = SystemState.objects.get_or_create(id=1)
     engine = DecisionEngine(df_4h)
-    
+
+    # 0. CONSULTAR LSTM (Score de confianza)
+    lstm_confianza, lstm_pct = obtener_lstm_confianza()
+
     # 1. ¿QUÉ DICE EL MERCADO AHORA?
     detected_regime, detected_strategy, reason = engine.detectar_regimen()
     
@@ -74,16 +101,20 @@ def ejecutar_sistema(df_4h, precio_actual):
 
     state.save()
 
-    # 4. EJECUTAR ESTRATEGIA (Solo si no estamos cambiando justo ahora)
+    # 4. EJECUTAR ESTRATEGIA (con modulación LSTM)
     if not switch_occurred:
         if state.active_strategy == 'GRID_V11':
-            res = ejecutar_logic_grid(wallet, precio_actual, engine)
+            res = ejecutar_logic_grid(wallet, precio_actual, engine, lstm_confianza)
             log_msg += res
         elif state.active_strategy == 'SHANNON_V13':
-            res = ejecutar_logic_shannon(wallet, precio_actual)
+            res = ejecutar_logic_shannon(wallet, precio_actual, lstm_confianza)
             log_msg += res
         else:
             log_msg += "Modo Cash/Hold activo."
+
+    # Log LSTM
+    lstm_emoji = "😐" if abs(lstm_pct) < 0.15 else ("🚀" if lstm_pct > 0 else "🔻")
+    log_msg += f" | LSTM: {lstm_emoji} {lstm_pct:+.2f}% (conf: {lstm_confianza:+.2f})"
 
     # Retorno para Dashboard
     return {
@@ -91,16 +122,18 @@ def ejecutar_sistema(df_4h, precio_actual):
         "strategy": state.active_strategy,
         "message": log_msg,
         "equity": round(equity_actual, 2),
-        "dd": round(dd_actual, 2),          # Nueva métrica para UI
-        "max_dd": round(state.max_drawdown, 2), # Nueva métrica para UI
+        "dd": round(dd_actual, 2),
+        "max_dd": round(state.max_drawdown, 2),
         "usdt": round(wallet.usdt_balance, 2),
-        "btc": round(wallet.btc_balance, 4)
+        "btc": round(wallet.btc_balance, 4),
+        "lstm_confianza": round(lstm_confianza, 2),
+        "lstm_pct": round(lstm_pct, 2),
     }
 
 # =====================================================
 # LÓGICA V11: GRID (ACUMULACIÓN / RANGO)
 # =====================================================
-def ejecutar_logic_grid(wallet, price, engine):
+def ejecutar_logic_grid(wallet, price, engine, lstm_confianza=0.0):
     orders = ActiveOrder.objects.all()
     
     # 1. SI NO HAY ÓRDENES -> INICIALIZAR
@@ -141,6 +174,10 @@ def ejecutar_logic_grid(wallet, price, engine):
                 order.side = 'SELL'
                 order.save()
                 
+                # LSTM FILTRA: si confianza es muy negativa, saltar compra
+                if lstm_confianza < -0.6:
+                    msg = "⚠️ Grid: LSTM vetó compra (bajista fuerte). "
+                    continue
                 TradeHistory.objects.create(strategy_used='GRID', action='ARBITRAGE_BUY', pnl_realized=0)
                 msg = "♻️ Grid Arbitrage (Compra). "
         
@@ -169,7 +206,7 @@ def ejecutar_logic_grid(wallet, price, engine):
 # =====================================================
 # LÓGICA V13: SHANNON (PROTECCIÓN / INCERTIDUMBRE)
 # =====================================================
-def ejecutar_logic_shannon(wallet, price):
+def ejecutar_logic_shannon(wallet, price, lstm_confianza=0.0):
     # Valor total
     val_btc = wallet.btc_balance * price
     val_usdt = wallet.usdt_balance
@@ -193,13 +230,16 @@ def ejecutar_logic_shannon(wallet, price):
             wallet.usdt_balance += usd_to_gain
             action = "SHANNON_SELL"
             
-        else: # Falta BTC -> COMPRAR
-            usd_to_spend = target_btc_val - val_btc
+        else:  # Falta BTC -> COMPRAR
+            # LSTM modula cuánto rebalancear al comprar BTC
+            # Bajista (-1.0) → solo 20% | Neutral (0.0) → 60% | Alcista (+1.0) → 100%
+            factor = max(0.2, min(1.0, 0.6 + (lstm_confianza * 0.4)))
+            usd_to_spend = (target_btc_val - val_btc) * factor
             btc_to_buy = usd_to_spend / price
             
             wallet.usdt_balance -= usd_to_spend
             wallet.btc_balance += btc_to_buy
-            action = "SHANNON_BUY"
+            action = f"SHANNON_BUY (x{factor:.0%})"
             
         wallet.save()
         TradeHistory.objects.create(strategy_used='SHANNON', action=action)

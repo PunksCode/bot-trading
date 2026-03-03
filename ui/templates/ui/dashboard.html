@@ -1,120 +1,137 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SYSTEM V11 // MATRIX</title>
-    <link rel="stylesheet" href="{% static 'ui/css/style.css' %}">
+    <title>TradingBot Dashboard</title>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+
+    <!-- Link al CSS externo -->
+    <link rel="stylesheet" href="{% static 'src/css/style.css' %}">
 </head>
+
 <body>
-    <canvas id="matrix-canvas"></canvas>
 
-    <div class="container">
-        <div class="header">
-            <div class="brand">
-                <span>⚡ QUANT SYSTEM V11</span>
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-logo">
+                <i class="fa-solid fa-layer-group"></i>
             </div>
-            <div>
-                <div class="price-lbl">BTC/USDT LIVE</div>
-                <div class="price-val">${{ precio }}</div>
-            </div>
+            <span>PUNKSCODE QUANT</span>
         </div>
 
-        <div class="main-layout">
-            <div class="chart-container">
-                <div class="tradingview-widget-container" style="height:100%;width:100%">
-                    <div id="tradingview_chart" style="height:100%;width:100%"></div>
-                    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-                    <script type="text/javascript">
-                    new TradingView.widget(
-                    {
-                        "autosize": true,
-                        "symbol": "BINANCE:BTCUSDT",
-                        "interval": "240", /* 4 Horas */
-                        "timezone": "America/Argentina/Buenos_Aires",
-                        "theme": "dark",
-                        "style": "1",
-                        "locale": "es",
-                        "toolbar_bg": "#f1f3f6",
-                        "enable_publishing": false,
-                        "hide_side_toolbar": false,
-                        "allow_symbol_change": true,
-                        "container_id": "tradingview_chart"
-                    }
-                    );
-                    </script>
-                </div>
-                </div>
+        <div class="system-status">
+            <div class="pulse-dot"></div>
+            <span>SISTEMA ACTIVO</span>
+        </div>
+    </header>
 
-            <div class="data-panel">
-                
-                <div class="card">
-                    <div class="label">Diagnóstico IA</div>
-                    <div class="value">
-                        {% if regime == 'RANGING' %}
-                            <span class="reg-ranging">↔ LATERAL (Grid)</span>
-                        {% elif regime == 'UNCERTAIN' %}
-                            <span class="reg-uncertain">? INCIERTO (Shannon)</span>
-                        {% elif regime == 'TRENDING' %}
-                            <span class="reg-trending">⚡ PELIGRO (Cash)</span>
-                        {% else %}
-                            <span>{{ regime }}</span>
-                        {% endif %}
-                    </div>
-                    <div style="font-size: 13px; color: #008f11; margin-top: 10px;">
-                        Estrategia: <span style="color:#fff; border-bottom:1px dashed #00ff41">{{ strategy }}</span>
-                    </div>
-                </div>
+    <div class="layout">
 
-                <div class="card">
-                    <div class="label">Total Equity</div>
-                    <div class="value">${{ equity }}</div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 15px; border-top: 1px dashed #003b00; padding-top: 10px;">
-                        <span style="font-size: 14px; color:#aaa;">USDT: ${{ usdt }}</span>
-                        <span style="font-size: 14px; color:#aaa;">BTC: {{ btc }}</span>
-                    </div>
-                </div>
+        <!-- SIDEBAR DE FINANZAS MINIMALISTA -->
+        <aside class="sidebar">
 
-                <div class="card">
-                    <div class="label">Métricas de Riesgo</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div class="label" style="font-size:9px">Drawdown Actual</div>
-                            <div class="value" style="color: {% if dd < -5 %}#f6465d{% else %}#fff{% endif %}">
-                                {{ dd }}%
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div class="label" style="font-size:9px">Max DD Histórico</div>
-                            <div class="value" style="color: #f6465d">{{ max_dd }}%</div>
-                        </div>
-                    </div>
-                </div>
+            <div class="card equity-card">
+                <div class="card-title">EQUITY TOTAL</div>
+                <div class="equity-value">${{ equity_total|default:"0.00" }}</div>
 
-                <div class="card">
-                    <div class="label">Control Manual</div>
-                    <form method="get">
-                        <button type="submit" class="refresh-btn">
-                            EJECUTAR ANÁLISIS
-                        </button>
-                    </form>
+                <div class="pnl-container">
+                    {% if pnl_usd >= 0 %}
+                    <div class="pnl-badge positive">
+                        <i class="fa-solid fa-arrow-trend-up"></i> +${{ pnl_usd }} (+{{ pnl_pct }}%)
+                    </div>
+                    {% else %}
+                    <div class="pnl-badge negative">
+                        <i class="fa-solid fa-arrow-trend-down"></i> -${{ pnl_usd|stringformat:"f"|slice:"1:" }} ({{
+                        pnl_pct }}%)
+                    </div>
+                    {% endif %}
                 </div>
             </div>
-        </div>
 
-        <div class="console-box">
-            > SYSTEM_INIT... SUCCESS<br>
-            > CONNECTING_BINANCE_API... ESTABLISHED<br>
-            > LOADING_TIMEFRAME_4H... COMPLETE<br>
-            > DETECTED_REGIME: [ {{ regime }} ]<br>
-            > ---------------------------------------------------<br>
-            > {{ message }}<br>
-            > ---------------------------------------------------<br>
-            > WAITING_FOR_NEXT_TICK...
+            <div class="card">
+                <div class="card-title">DISTRIBUCIÓN DE ACTIVOS</div>
+
+                <div class="asset-row">
+                    <div class="asset-info">
+                        <div class="asset-icon usdt"><i class="fa-solid fa-dollar-sign"></i></div>
+                        <span class="asset-name">Tether USD</span>
+                    </div>
+                    <div class="asset-value">
+                        <div class="value-main">${{ usdt_balance|default:"0.00" }}</div>
+                        <div class="value-sub">Disponible</div>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="asset-row">
+                    <div class="asset-info">
+                        <div class="asset-icon btc"><i class="fa-brands fa-btc"></i></div>
+                        <span class="asset-name">Bitcoin</span>
+                    </div>
+                    <div class="asset-value">
+                        <div class="value-main">₿ {{ btc_balance|default:"0.0000" }}</div>
+                        <div class="value-sub">Posición Activa</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">RENDIMIENTO BASE</div>
+                <div class="stat-row">
+                    <span class="stat-label">Capital Inicial</span>
+                    <span class="stat-value">${{ initial_capital|default:"0.00" }}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Estado de Conexión</span>
+                    <span class="stat-value highlight">Conectado a Exchange</span>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- ÁREA PRINCIPAL DE GRÁFICOS -->
+        <div class="main-content">
+
+            <div class="chart-panel main-chart">
+                <div id="tradingview_widget" class="tv-wrapper"></div>
+            </div>
+
+            <div class="chart-panel secondary-chart">
+                <div class="chart-header">
+                    <span>Crecimiento del Portafolio</span>
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="pnlChart"></canvas>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <script src="{% static 'ui/js/matrix.js' %}"></script>
+    <!-- DATA PUENTE PARA CHART.JS -->
+    <script id="chart-data-bridge" type="application/json">
+        {
+            "fechas": {{ fechas_json|safe|default:"[]" }},
+            "equityValues": {{ equity_json|safe|default:"[]" }}
+        }
+    </script>
+
+    <!-- SCRIPTS -->
+    <script src="{% static 'src/js/tradingview.js' %}"></script>
+    <script src="{% static 'src/js/equity_chart.js' %}"></script>
+
 </body>
+
 </html>

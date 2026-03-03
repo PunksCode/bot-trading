@@ -1,18 +1,22 @@
 """
 Django settings for bottrading project.
-Generado por Django 3.2.25
 """
-
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-t!1dhe%f%5#o0s)maoqa0v)3fyhw01+p4hx0+6neljy41tg&zs'
-DEBUG = True
-ALLOWED_HOSTS = []
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-dev-only-change-in-production')
+DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1')
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 # Apps
 INSTALLED_APPS = [
+    'daphne',       # <--- 1. AGREGAR ESTO PRIMERO (Para el servidor ASGI)
+    'channels',     # <--- 2. AGREGAR ESTO SEGUNDO (Para WebSockets)
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -24,6 +28,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -50,7 +55,17 @@ TEMPLATES = [
     },
 ]
 
+# Configuración del Servidor
 WSGI_APPLICATION = 'bottrading.wsgi.application'
+ASGI_APPLICATION = 'bottrading.asgi.application' # <--- 3. AGREGAR ESTO (Ruta a tu archivo asgi.py)
+
+# Configuración de Capa de Canales (Memoria por defecto para desarrollo)
+# <--- 4. AGREGAR ESTO (Vital para que funcione group_add)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
 
 # DB (desarrollo)
 DATABASES = {
@@ -76,9 +91,11 @@ USE_TZ = True
 
 # Static
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Login (para @login_required en el dashboard)
+# Login
 LOGIN_URL = '/admin/login/'
 LOGIN_REDIRECT_URL = '/'

@@ -2,12 +2,9 @@ import os
 from apscheduler.schedulers.background import BackgroundScheduler
 from django.utils import timezone
 from dotenv import load_dotenv
-from .executor import execute_signal
-from ui.models import StrategyConfig, Trade
 
 load_dotenv()
-SYMBOL = os.getenv("SYMBOL", "SOLUSDT")
-TRADE_QTY = float(os.getenv("TRADE_QTY", "0.1"))
+SYMBOL = os.getenv("SYMBOL", "BTCUSDT")
 
 sched = BackgroundScheduler()
 

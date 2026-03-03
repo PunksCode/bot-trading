@@ -4,7 +4,10 @@ from dotenv import load_dotenv
 from django.core.cache import cache
 
 load_dotenv()
-SYMBOL = os.getenv("SYMBOL", "SOLUSDT").lower()
+SYMBOL = os.getenv("SYMBOL", "BTCUSDT").lower()
+WS_BASE_URL = os.getenv("BINANCE_WS_URL", "wss://testnet.binance.vision")
+# binance-connector 3.x usa stream_url con path /ws
+STREAM_URL = WS_BASE_URL.rstrip("/") + "/ws"
 
 # Usamos el WebSocket oficial del conector
 from binance.websocket.spot.websocket_stream import SpotWebsocketStreamClient as WSClient
@@ -35,16 +38,22 @@ def start_ws():
 
     def run():
         global _ws
-        _ws = WSClient(on_message=_on_message, ws_base_url="wss://testnet.binance.vision")
-        # stream de miniTicker de un símbolo (rápido y liviano)
-        _ws.mini_ticker(symbol=SYMBOL)
-        # mantener el hilo vivo
+        import logging
+        logger = logging.getLogger(__name__)
         try:
+            _ws = WSClient(on_message=_on_message, stream_url=STREAM_URL)
+            # stream de miniTicker de un símbolo (rápido y liviano)
+            _ws.mini_ticker(symbol=SYMBOL)
+            logger.info(f"✅ WebSocket conectado a {STREAM_URL}")
+            # mantener el hilo vivo
             while _started:
                 pass
+        except Exception as e:
+            logger.warning(f"⚠️ WebSocket no disponible ({e}). El bot funciona sin él.")
         finally:
             try:
-                _ws.stop()
+                if _ws:
+                    _ws.stop()
             except Exception:
                 pass
 

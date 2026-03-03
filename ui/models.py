@@ -38,6 +38,13 @@ class SystemState(models.Model):
     peak_equity = models.FloatField(default=10000.0) # High Watermark
     max_drawdown = models.FloatField(default=0.0)    # Peor caída registrada
 
+    # --- PARÁMETROS DE APRENDIZAJE (META-LEARNING) ---
+    # Estos valores se actualizan con el optimizador
+    param_adx_max = models.FloatField(default=25.0)    # Límite para activar Grid
+    param_atr_mult = models.FloatField(default=4.0)    # Multiplicador del rango
+    
+    last_optimization = models.DateTimeField(null=True, blank=True) # Cuándo aprendimos
+
 class ActiveOrder(models.Model):
     """Órdenes vivas (usadas por el Grid)"""
     SIDE_CHOICES = [('BUY', 'COMPRA'), ('SELL', 'VENTA')]
@@ -52,3 +59,12 @@ class TradeHistory(models.Model):
     action = models.CharField(max_length=50) # Ej: "Grid Arbitrage", "Shannon Rebalance"
     pnl_realized = models.FloatField(default=0.0)
     timestamp = models.DateTimeField(auto_now_add=True)
+class PortfolioSnapshot(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True)
+    equity = models.FloatField()
+    pnl_usd = models.FloatField()
+    pnl_percent = models.FloatField()
+    strategy_used = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"{self.timestamp} - ${self.equity}"

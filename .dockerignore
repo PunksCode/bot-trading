@@ -1,0 +1,35 @@
+# VCS & IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Environment & Secrets
+.env
+secrets.json
+
+# Database & Logs (se montan como volúmenes)
+db.sqlite3
+*.log
+
+# Modelos LSTM (se montan como volúmenes)
+research/
+
+# Archivos generados
+staticfiles/
+
+# Notebooks & Entrenamiento
+*.ipynb
+.ipynb_checkpoints/
+entrenar_*.py
+
+# Docs
+DEPLOY.md
+readme.md
