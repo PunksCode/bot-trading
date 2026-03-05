@@ -1,74 +1,126 @@
-# Guía de Despliegue en Render.com (Background Worker — 24/7)
+# Guía de Despliegue en Fly.io (São Paulo — 24/7)
 
-Esta guía detalla cómo desplegar el bot de trading en Render.com usando un
-Background Worker que **no se duerme nunca**, garantizando operación 24/7.
+Despliegue del bot de trading en **Fly.io** con VM always-on en la región
+**São Paulo (GRU)** — sin bloqueo de Binance, sin dormirse nunca.
 
 ## Requisitos Previos
 
-- Cuenta en [Render.com](https://render.com) (gratis, sin tarjeta)
-- Repositorio privado en GitHub con **todo el código** (incluidos archivos core)
+- Cuenta en [Fly.io](https://fly.io) (registrarse con GitHub)
+- Repositorio privado en GitHub con todo el código
 - Variables de entorno listas (Binance API, Telegram, Django)
 
-## 1. Conectar GitHub con Render
+## 1. Instalar flyctl
 
-1. Entrá a [dashboard.render.com](https://dashboard.render.com)
-2. Hacé clic en **"New +"** → **"Blueprint"**
-3. Conectá tu cuenta de GitHub si no lo hiciste
-4. Seleccioná el repo **`bot-trading-original-full`** (privado)
-5. Render detectará el archivo `render.yaml` y creará el servicio automáticamente
+```bash
+curl -L https://fly.io/install.sh | sh
+```
 
-## 2. Configurar Variables de Entorno
+Agregar al PATH (si no se agrega automáticamente):
+```bash
+export FLYCTL_INSTALL="/home/$USER/.fly"
+export PATH="$FLYCTL_INSTALL/bin:$PATH"
+```
 
-Render pedirá que completes las variables marcadas como `sync: false`:
+## 2. Login
 
-| Variable | Valor |
-|---|---|
-| `BINANCE_API_KEY` | Tu API key de Binance |
-| `BINANCE_SECRET_KEY` | Tu secret key de Binance |
-| `BINANCE_BASE_URL` | `https://api.binance.com` (producción) |
-| `BINANCE_WS_URL` | `wss://stream.binance.com:9443` (producción) |
-| `TELEGRAM_TOKEN` | Token de tu bot de Telegram |
-| `TELEGRAM_CHAT_ID` | Tu chat ID de Telegram |
+```bash
+fly auth login
+```
 
-Las demás variables (`DJANGO_SECRET_KEY`, etc.) se configuran automáticamente.
+Se abrirá el navegador para autenticarte con GitHub.
 
-## 3. Deploy
+## 3. Lanzar la App
 
-Render construirá la imagen Docker y levantará el bot automáticamente.
-El bot ejecuta:
-- **Daphne ASGI** (servidor web + WebSocket)
-- **Bot de Telegram** (comandos interactivos + reportes horarios)
+Desde el directorio del proyecto:
 
-## 4. Seguridad (IP de Binance)
+```bash
+fly launch --no-deploy
+```
 
-Una vez desplegado:
-1. En el panel de Render, buscá la IP saliente del servicio
-2. En Binance → API Management → Restringir a IPs de confianza
-3. Pegá la IP de Render
+- Seleccioná la región **São Paulo (GRU)**
+- Fly detectará el `Dockerfile` y `fly.toml` automáticamente
+- Usá `--no-deploy` para configurar secrets antes del primer deploy
 
-## Comandos Útiles
+## 4. Configurar Variables de Entorno (Secrets)
 
-- **Ver logs:** Panel de Render → tu servicio → Logs
-- **Reiniciar:** Panel de Render → tu servicio → Manual Deploy
-- **Actualizar:** Push a GitHub → Render re-deploya automáticamente
+```bash
+fly secrets set \
+  BINANCE_API_KEY="tu_api_key" \
+  BINANCE_SECRET_KEY="tu_secret_key" \
+  BINANCE_BASE_URL="https://api.binance.com" \
+  BINANCE_WS_URL="wss://stream.binance.com:9443" \
+  TELEGRAM_TOKEN="tu_token" \
+  TELEGRAM_CHAT_ID="tu_chat_id" \
+  DJANGO_SECRET_KEY="una-clave-secreta-larga-y-aleatoria" \
+  DJANGO_DEBUG="False" \
+  DJANGO_ALLOWED_HOSTS="*" \
+  SYMBOL="BTCUSDT"
+```
+
+## 5. Deploy
+
+```bash
+fly deploy
+```
+
+Fly construirá la imagen Docker y levantará el bot automáticamente.
+
+## 6. Verificar
+
+```bash
+# Ver logs en tiempo real
+fly logs
+
+# Estado de la máquina
+fly status
+
+# Acceder por SSH
+fly ssh console
+
+# Health check manual
+fly ssh console -C "curl localhost:8000/health"
+```
+
+## Configuración Always-On
+
+El archivo `fly.toml` ya tiene configurado:
+
+```toml
+auto_stop_machines = "off"     # NO se detiene
+min_machines_running = 1       # Siempre al menos 1 corriendo
+```
+
+**Tu bot corre 24/7 sin dormirse.**
 
 ## Arquitectura
 
 ```
-┌─────────────────────────────────────┐
-│   Render Background Worker (Free)   │
-│                                     │
-│   ┌──────────┐   ┌──────────────┐   │
-│   │  Daphne  │   │   Telegram   │   │
-│   │  (ASGI)  │   │     Bot      │   │
-│   └────┬─────┘   └──────┬───────┘   │
-│        │                 │           │
-│   Dashboard Web    Comandos/Reportes │
-│   + WebSocket      + Alertas         │
-└────────┬─────────────────┬───────────┘
+┌─────────────────────────────────────────┐
+│   Fly.io VM — São Paulo (GRU)           │
+│   shared-cpu-1x • 256 MB • Always-On    │
+│                                         │
+│   ┌──────────┐   ┌──────────────┐       │
+│   │  Daphne  │   │   Telegram   │       │
+│   │  (ASGI)  │   │     Bot      │       │
+│   └────┬─────┘   └──────┬───────┘       │
+│        │                 │               │
+│   Dashboard Web    Comandos/Reportes     │
+│   + WebSocket      + Alertas             │
+└────────┬─────────────────┬───────────────┘
          │                 │
     ┌────▼────┐      ┌─────▼────┐
     │ Binance │      │ Telegram │
     │   API   │      │   API    │
     └─────────┘      └──────────┘
 ```
+
+## Comandos Útiles
+
+| Comando | Descripción |
+|---------|-------------|
+| `fly logs` | Ver logs en tiempo real |
+| `fly status` | Estado de la app/máquinas |
+| `fly deploy` | Re-deployar con últimos cambios |
+| `fly ssh console` | Acceder a la VM por SSH |
+| `fly secrets list` | Ver secrets configurados |
+| `fly scale show` | Ver recursos asignados |
