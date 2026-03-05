@@ -3,7 +3,7 @@
 #  Región: São Paulo (GRU) — Sin bloqueo de Binance
 # ═══════════════════════════════════════════════════════════
 
-app = 'punkscode-quant-bot'
+app = 'bot-trading-original-full-b7knag'
 primary_region = 'gru'
 
 [build]
