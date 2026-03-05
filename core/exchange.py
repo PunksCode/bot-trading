@@ -26,3 +26,16 @@ def get_price(symbol: str) -> float:
 
 def market_order(symbol: str, side: str, quantity: float):
     return _client().new_order(symbol=symbol, side=side, type="MARKET", quantity=quantity)
+
+def get_balances() -> dict:
+    """Lee los balances reales de USDT y BTC desde la cuenta de Binance."""
+    try:
+        account = _client().account()
+        balances = {b['asset']: float(b['free']) + float(b['locked']) for b in account['balances']}
+        return {
+            'USDT': balances.get('USDT', 0.0),
+            'BTC': balances.get('BTC', 0.0),
+        }
+    except Exception as e:
+        return {'error': str(e), 'USDT': 0.0, 'BTC': 0.0}
+

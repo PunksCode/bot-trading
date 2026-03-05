@@ -11,6 +11,10 @@ python manage.py migrate --noinput
 echo "📦 Recolectando archivos estáticos..."
 python manage.py collectstatic --noinput
 
+# 3. Sincronizar balance real de Binance
+echo "🔄 Sincronizando balance real de Binance..."
+python manage.py sync_portfolio
+
 # 3. Iniciar el bot de Telegram en background
 echo "🤖 Iniciando bot de Telegram..."
 python manage.py run_telegram &
