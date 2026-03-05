@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from .models import Portfolio, PortfolioSnapshot
 import json
 
@@ -35,3 +36,6 @@ def dashboard(request):
 
     return render(request, "ui/dashboard.html", context)
 
+def health(request):
+    """Endpoint público para health check de Render y keep-alive."""
+    return JsonResponse({"status": "ok"})

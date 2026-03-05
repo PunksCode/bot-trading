@@ -1,11 +1,12 @@
 services:
-  # ─── Bot de Trading (Background Worker — NO se duerme) ───
-  - type: worker
+  # ─── Bot de Trading (Web Service Free — con keep-alive 24/7) ───
+  - type: web
     name: quant-bot
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerCommand: bash start.sh
     plan: free
+    healthCheckPath: /health
     envVars:
       - key: BINANCE_API_KEY
         sync: false
