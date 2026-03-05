@@ -2,6 +2,7 @@ services:
   # ─── Bot de Trading (Web Service Free — con keep-alive 24/7) ───
   - type: web
     name: quant-bot
+    region: frankfurt
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerCommand: bash start.sh
